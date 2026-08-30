@@ -1,0 +1,10 @@
+{
+  "name": "Color Picker",
+  "description": "A persistent color-picker icon in the Ubuntu top panel.",
+  "uuid": "color-picker@mcrae",
+  "shell-version": [
+    "50"
+  ],
+  "url": "https://github.com/mcrae/color-picker"
+}
+
