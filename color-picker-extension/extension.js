@@ -1,6 +1,7 @@
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 export default class ColorPickerExtension extends Extension {
@@ -17,7 +18,7 @@ export default class ColorPickerExtension extends Extension {
         this._indicator.add_child(icon);
 
         // Create a placeholder popup menu item for Phase 1
-        let placeholderItem = new PanelMenu.PopupMenuItem('Color Picker clicked (Placeholder)');
+        let placeholderItem = new PopupMenu.PopupMenuItem('Color Picker clicked (Placeholder)');
         this._indicator.menu.addMenuItem(placeholderItem);
 
         // Add the indicator to the right side of the GNOME Shell panel

@@ -1,10 +1,10 @@
 {
   "name": "Color Picker",
   "description": "A persistent color-picker icon in the Ubuntu top panel.",
-  "uuid": "color-picker@mcrae",
+  "uuid": "pickr@watergold12.github.io",
   "shell-version": [
     "50"
   ],
-  "url": "https://github.com/mcrae/color-picker"
+  "url": "https://github.com/Watergold12/Pickr"
 }
 
