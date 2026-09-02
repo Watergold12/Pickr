@@ -6,6 +6,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
+import { ColorUtils } from './colorUtils.js';
 
 export default class ColorPickerExtension extends Extension {
     enable() {
@@ -146,62 +147,123 @@ export default class ColorPickerExtension extends Extension {
         });
     }
 
+    _createFormatRow(formatName, value) {
+        let rowBox = new St.BoxLayout({
+            vertical: false,
+            style: 'padding: 8px 12px; border-radius: 8px; background-color: rgba(128,128,128,0.1); margin-bottom: 6px;',
+            x_expand: true
+        });
+        
+        let textCol = new St.BoxLayout({
+            vertical: true,
+            x_expand: true,
+            y_align: Clutter.ActorAlign.CENTER
+        });
+        
+        let formatLabel = new St.Label({
+            text: formatName,
+            style: 'font-size: 0.85em; opacity: 0.7; font-weight: bold; margin-bottom: 4px;'
+        });
+        let valueLabel = new St.Label({
+            text: value,
+            style: 'font-family: monospace; font-size: 1.0em;'
+        });
+        
+        textCol.add_child(formatLabel);
+        textCol.add_child(valueLabel);
+        
+        let copyButton = new St.Button({
+            label: 'Copy',
+            style_class: 'button',
+            style: 'background-color: #3584E4; color: white; border-radius: 6px; padding: 4px 12px; font-size: 0.9em; font-weight: bold;',
+            y_align: Clutter.ActorAlign.CENTER
+        });
+        copyButton.connect('clicked', () => {
+            let clipboard = St.Clipboard.get_default();
+            clipboard.set_text(St.ClipboardType.CLIPBOARD, value);
+            this._indicator.menu.close();
+        });
+        
+        rowBox.add_child(textCol);
+        rowBox.add_child(copyButton);
+        return rowBox;
+    }
+
     _showColorResult(color) {
-        // GNOME's Cogl.Color exposes red, green, blue as integers 0-255
         let r = color.red;
         let g = color.green;
         let b = color.blue;
 
-        let hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`.toUpperCase();
-        let rgb = `${r}, ${g}, ${b}`;
-
         if (!this._indicator) return;
         this._indicator.menu.removeAll();
 
-        // 1. Color Preview and Values
-        let resultItem = new PopupMenu.PopupBaseMenuItem({ reactive: false });
+        // Preview header
+        let hex = ColorUtils.toHex(r, g, b);
+        let headerItem = new PopupMenu.PopupBaseMenuItem({ reactive: false });
         
         let colorPreview = new St.Widget({
-            style: `background-color: ${hex}; border-radius: 4px; border: 1px solid #ccc;`,
-            width: 24,
-            height: 24,
+            style: `background-color: ${hex}; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2);`,
+            width: 32,
+            height: 32,
             y_align: Clutter.ActorAlign.CENTER,
-        });
-        resultItem.add_child(colorPreview);
-
-        let labelsBox = new St.BoxLayout({
-            vertical: true,
-            x_expand: true,
-            y_align: Clutter.ActorAlign.CENTER,
-            style: 'margin-left: 12px;'
         });
         
-        let hexLabel = new St.Label({
-            text: `HEX: ${hex}`,
-            style: 'font-weight: bold;'
+        let previewLabel = new St.Label({
+            text: 'Selected Color',
+            style: 'font-weight: bold; margin-left: 12px;',
+            y_align: Clutter.ActorAlign.CENTER,
         });
-        let rgbLabel = new St.Label({
-            text: `RGB: ${rgb}`,
-            style: 'font-size: 0.9em; opacity: 0.8;'
-        });
-
-        labelsBox.add_child(hexLabel);
-        labelsBox.add_child(rgbLabel);
-        resultItem.add_child(labelsBox);
-
-        this._indicator.menu.addMenuItem(resultItem);
+        
+        headerItem.add_child(colorPreview);
+        headerItem.add_child(previewLabel);
+        this._indicator.menu.addMenuItem(headerItem);
         this._indicator.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-        // 2. Copy Action
-        let copyItem = new PopupMenu.PopupMenuItem('Copy HEX');
-        copyItem.connect('activate', () => {
-            let clipboard = St.Clipboard.get_default();
-            clipboard.set_text(St.ClipboardType.CLIPBOARD, hex);
-            this._buildMenu();
+        // Scrollable area for formats
+        let scrollItem = new PopupMenu.PopupBaseMenuItem({ reactive: false, hover: false });
+        // Make the item itself expand and hold the scroll view
+        scrollItem.style = 'padding: 0; margin: 0;';
+        
+        let scrollView = new St.ScrollView({
+            style_class: 'vfade',
+            hscrollbar_policy: St.PolicyType.NEVER,
+            vscrollbar_policy: St.PolicyType.AUTOMATIC,
+            style: 'max-height: 400px; padding: 8px;'
         });
-        this._indicator.menu.addMenuItem(copyItem);
+        
+        let scrollContent = new St.BoxLayout({
+            vertical: true,
+            x_expand: true,
+        });
+        
+        // Add formats to scrollContent
+        const formats = [
+            { name: "Name", value: ColorUtils.getClosestColorName(r, g, b) },
+            { name: "HEX", value: hex },
+            { name: "RGB", value: ColorUtils.toRgb(r, g, b) },
+            { name: "RGB Percent", value: ColorUtils.toRgbPercent(r, g, b) },
+            { name: "HSL", value: ColorUtils.toHsl(r, g, b) },
+            { name: "HSV", value: ColorUtils.toHsv(r, g, b) },
+            { name: "CMYK", value: ColorUtils.toCmyk(r, g, b) },
+            { name: "HWB", value: ColorUtils.toHwb(r, g, b) },
+            { name: "XYZ", value: ColorUtils.toXyz(r, g, b) },
+            { name: "CIE-L*ab", value: ColorUtils.toLab(r, g, b) },
+            { name: "CIE-LCh", value: ColorUtils.toLch(r, g, b) },
+            { name: "OKLAB", value: ColorUtils.toOklab(r, g, b) },
+            { name: "OKLCH", value: ColorUtils.toOklch(r, g, b) }
+        ];
 
-        // 3. Dismiss Action
+        for (let fmt of formats) {
+            scrollContent.add_child(this._createFormatRow(fmt.name, fmt.value));
+        }
+
+        scrollView.add_child(scrollContent);
+        scrollItem.add_child(scrollView);
+        this._indicator.menu.addMenuItem(scrollItem);
+        
+        this._indicator.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+
+        // Dismiss Action
         let resetItem = new PopupMenu.PopupMenuItem('Dismiss');
         resetItem.connect('activate', () => {
             this._buildMenu();
