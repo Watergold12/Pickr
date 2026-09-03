@@ -1,6 +1,8 @@
 {
   "name": "Color Picker",
   "description": "A persistent color-picker icon in the Ubuntu top panel.",
+  "name": "Pickr",
+  "description": "A pixel-precise color picker for GNOME Shell. Click anywhere to get colors in 13 formats instantly.",
   "uuid": "pickr@watergold12.github.io",
   "shell-version": [
     "50"
