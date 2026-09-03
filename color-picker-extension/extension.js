@@ -70,13 +70,15 @@ export default class ColorPickerExtension extends Extension {
             style: 'background-color: rgba(0, 0, 0, 0.01);'
         });
 
+        this._pickerSignals = [];
+
         // 1. Intercept pointer events
-        this._pickerActor.connect('button-press-event', () => {
+        this._pickerSignals.push(this._pickerActor.connect('button-press-event', () => {
             // Swallow press events so they don't bleed through to windows below
             return Clutter.EVENT_STOP;
-        });
+        }));
 
-        this._pickerActor.connect('button-release-event', (actor, event) => {
+        this._pickerSignals.push(this._pickerActor.connect('button-release-event', (actor, event) => {
             let [x, y] = event.get_coords();
             
             // CRITICAL: Release the grab BEFORE doing anything else
@@ -84,17 +86,17 @@ export default class ColorPickerExtension extends Extension {
             
             this._pickColorAt(x, y);
             return Clutter.EVENT_STOP;
-        });
+        }));
 
         // 2. Intercept keyboard events (Escape to cancel)
-        this._pickerActor.connect('key-press-event', (actor, event) => {
+        this._pickerSignals.push(this._pickerActor.connect('key-press-event', (actor, event) => {
             if (event.get_key_symbol() === Clutter.KEY_Escape) {
                 // CRITICAL: Release the grab on cancellation
                 this._stopColorPick();
                 return Clutter.EVENT_STOP;
             }
             return Clutter.EVENT_PROPAGATE;
-        });
+        }));
 
         // 3. Add to the layout
         Main.layoutManager.addChrome(this._pickerActor);
@@ -127,6 +129,12 @@ export default class ColorPickerExtension extends Extension {
 
         // Destroy the actor
         if (this._pickerActor) {
+            if (this._pickerSignals) {
+                for (let id of this._pickerSignals) {
+                    this._pickerActor.disconnect(id);
+                }
+                this._pickerSignals = null;
+            }
             Main.layoutManager.removeChrome(this._pickerActor);
             this._pickerActor.destroy();
             this._pickerActor = null;
@@ -281,6 +289,10 @@ export default class ColorPickerExtension extends Extension {
             this._indicator.destroy();
             this._indicator = null;
         }
-        this._pickColorItem = null;
+        
+        if (this._pickColorItem) {
+            this._pickColorItem.destroy();
+            this._pickColorItem = null;
+        }
     }
 }
